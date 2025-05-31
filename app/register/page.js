@@ -45,6 +45,7 @@ export default function RegisterPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
   const token = localStorage.getItem('authToken');
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -113,7 +114,7 @@ export default function RegisterPage() {
         delete payload._id;
         delete payload.confirmPassword;
         const res = await axios.put(
-          `http://localhost:3001/api/updateUser/${formData._id}`,
+          `${baseURL}/api/updateUser/${formData._id}`,
           updatePayload,
           {
             headers: {
@@ -126,7 +127,7 @@ export default function RegisterPage() {
         const payload = { ...formData };
         delete payload._id;
         delete payload.confirmPassword;
-        const res = await axios.post('http://localhost:3001/api/register', payload,
+        const res = await axios.post(`${baseURL}/api/register`, payload,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -148,7 +149,7 @@ export default function RegisterPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/getAlluserApi/users', {
+      const res = await axios.get(`${baseURL}/getAlluserApi/users`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -210,7 +211,7 @@ export default function RegisterPage() {
       };
 
       const res = await axios.put(
-        `http://localhost:3001/auth/updateUserStatus/${row._id}`,
+        `${baseURL}/auth/updateUserStatus/${row._id}`,
         payload,
         {
           headers: {

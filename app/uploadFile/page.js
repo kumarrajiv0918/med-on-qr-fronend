@@ -36,6 +36,7 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
   const [files, setFiles] = useState([]);
   const fileInputRef = useRef(null);
+    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
   const token = localStorage.getItem('authToken');
   useEffect(() => {
     setIsClient(true);
@@ -47,7 +48,7 @@ export default function Home() {
 console.log("token",token);
   const fetchFiles = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/uploadFile/files',{    
+      const res = await axios.get(`${baseURL}/uploadFile/files`,{    
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -74,7 +75,7 @@ console.log("token",token);
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/uploadFile/upload', formData, {
+      const response = await axios.post(`${baseURL}/uploadFile/upload`, formData, {
         headers: { 
           'Content-Type': 'multipart/form-data',
            Authorization: `Bearer ${token}`
@@ -106,7 +107,7 @@ console.log("token",token);
 
   const handleDeleteFile = async (fileName) => {
     try {
-      await axios.delete(`http://localhost:3001/uploadFile/deleteByName/${fileName}`);
+      await axios.delete(`${baseURL}/uploadFile/deleteByName/${fileName}`);
       fetchFiles(); // Refresh the file list after delete
     } catch (err) {
       console.error('Failed to delete file', err);
