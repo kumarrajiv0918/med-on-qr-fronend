@@ -22,7 +22,7 @@ export default function LoginClient() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
   const validateEmail = (email) => /\S+@\S+\.\S+/.test(email);
 
   const handleLogin = async () => {
@@ -43,7 +43,7 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:3001/auth/login', {
+      const res = await axios.post(`${baseURL}/auth/login`, {
         email,
         password
       });
