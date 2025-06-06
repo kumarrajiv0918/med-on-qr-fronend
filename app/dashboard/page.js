@@ -7,6 +7,23 @@ import Navbar from '../components/Navbar';
 const drawerWidth = 240;
 
 export default function Dashboard() {
+  const [token, setToken] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('authToken');
+      setToken(storedToken);
+      const storedUser = localStorage.getItem('user');
+
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.roleId !== 'admin' && !storedToken) {
+          localStorage.clear();
+          router.push('/auth');
+        }
+      }
+    }
+  }, []);
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />

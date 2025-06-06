@@ -46,6 +46,7 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       const storedToken = localStorage.getItem('authToken');
       if (!storedToken) {
+        localStorage.clear();
         router.push('/auth');
       } else {
         setToken(storedToken);
