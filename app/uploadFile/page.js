@@ -17,7 +17,6 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import LogoutIcon from '@mui/icons-material/Logout';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/Download';
@@ -27,39 +26,48 @@ import Navbar from '../components/Navbar';
 
 export default function Home() {
   const router = useRouter();
+  const fileInputRef = useRef(null);
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  const [token, setToken] = useState('');
   const [file, setFile] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [fileType, setFileType] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [files, setFiles] = useState([]);
-  const fileInputRef = useRef(null);
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
-  const token = localStorage.getItem('authToken');
+  const [isClient, setIsClient] = useState(false);
+
+  // Run only on client side
   useEffect(() => {
     setIsClient(true);
-    if (!token) {
-      router.push('/auth');
+
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('authToken');
+      if (!storedToken) {
+        router.push('/auth');
+      } else {
+        setToken(storedToken);
+        fetchFiles(storedToken);
+      }
     }
-    fetchFiles();
   }, [router]);
-console.log("token",token);
-  const fetchFiles = async () => {
+
+  const fetchFiles = async (authToken) => {
     try {
-      const res = await axios.get(`${baseURL}/uploadFile/files`,{    
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      const res = await axios.get(`${baseURL}/uploadFile/files`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
       });
-      console.log('FILES API RESPONSE:', res.data);
       setFiles(Array.isArray(res.data) ? res.data : res.data.files || []);
     } catch (err) {
       console.error('Failed to fetch files', err);
       setFiles([]);
     }
   };
+
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
@@ -76,17 +84,17 @@ console.log("token",token);
     setLoading(true);
     try {
       const response = await axios.post(`${baseURL}/uploadFile/upload`, formData, {
-        headers: { 
+        headers: {
           'Content-Type': 'multipart/form-data',
-           Authorization: `Bearer ${token}`
-       },
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       setFileUrl(response.data.fileUrl);
       setQrCodeUrl(response.data.qrCodeUrl || null);
       setFileType(response.data.fileType || null);
       setError(null);
-      fetchFiles();
+      fetchFiles(token);
     } catch (err) {
       setError('Error uploading file');
     } finally {
@@ -107,33 +115,39 @@ console.log("token",token);
 
   const handleDeleteFile = async (fileName) => {
     try {
-      await axios.delete(`${baseURL}/uploadFile/deleteByName/${fileName}`);
-      fetchFiles(); // Refresh the file list after delete
+      await axios.delete(`${baseURL}/uploadFile/deleteByName/${fileName}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchFiles(token);
     } catch (err) {
       console.error('Failed to delete file', err);
     }
   };
-const columns = [
-  { field: 'fileName', headerName: 'File Name', flex: 1 },
-  {
-    field: 'actions',
-    headerName: 'Actions',
-    width: 180,
-    renderCell: (params) => (
-      <>
-        <IconButton color="primary" onClick={() => window.open(params.row.fileUrl, '_blank')}>
-          <PictureAsPdfIcon />
-        </IconButton>
-        <IconButton color="primary" onClick={() => window.open(params.row.fileUrl, '_blank')}>
-          <FileDownloadIcon />
-        </IconButton>
-        <IconButton color="error" onClick={() => handleDeleteFile(params.row.fileName)}>
-          <DeleteIcon />
-        </IconButton>
-      </>
-    ),
-  },
-]
+
+  const columns = [
+    { field: 'fileName', headerName: 'File Name', flex: 1 },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 180,
+      renderCell: (params) => (
+        <>
+          <IconButton color="primary" onClick={() => window.open(params.row.fileUrl, '_blank')}>
+            <PictureAsPdfIcon />
+          </IconButton>
+          <IconButton color="primary" onClick={() => window.open(params.row.fileUrl, '_blank')}>
+            <FileDownloadIcon />
+          </IconButton>
+          <IconButton color="error" onClick={() => handleDeleteFile(params.row.fileName)}>
+            <DeleteIcon />
+          </IconButton>
+        </>
+      ),
+    },
+  ];
+
   if (!isClient) return null;
 
   return (
@@ -145,13 +159,14 @@ const columns = [
           <Typography variant="h4" gutterBottom>
             Medical File Upload & QR Generator
           </Typography>
+
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
             <Typography variant="h6" color="#1976d2">
               📁 File Upload & Management
             </Typography>
           </Box>
 
-          <Card elevation={3} sx={{ maxWidth: "auto", mx: 'auto', borderRadius: 3 }}>
+          <Card elevation={3} sx={{ borderRadius: 3 }}>
             <CardContent>
               {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -179,7 +194,12 @@ const columns = [
                 >
                   {loading ? <CircularProgress size={20} color="inherit" /> : 'Upload'}
                 </Button>
-                <Button onClick={handleReset} variant="outlined" color="secondary" startIcon={<RestartAltIcon />}>
+                <Button
+                  onClick={handleReset}
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<RestartAltIcon />}
+                >
                   Reset
                 </Button>
               </Box>
@@ -199,7 +219,7 @@ const columns = [
                 <Typography variant="subtitle1" fontWeight="bold" mb={1}>
                   Files:
                 </Typography>
-                <div style={{ height:"50vh", maxHeight: "auto", width: '100%' }}>
+                <div style={{ height: '50vh', width: '100%' }}>
                   <DataGrid
                     rows={files.map((file, index) => ({
                       id: index,
