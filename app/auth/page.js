@@ -51,11 +51,11 @@ export default function LoginClient() {
       if (res.data?.message) {
         const { roleId } = res.data.data;
 
-        if (roleId !== 'admin') {
-          setError('Only admin users can login.');
-          setLoading(false);
-          return;
-        }
+    if (roleId !== 'admin' && roleId !== 'user') {
+    setError('You do not have permission to login.');
+    setLoading(false);
+    return;
+  }
 
         // Set localStorage values
         localStorage.setItem('authToken', res.data.token);
