@@ -46,19 +46,23 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
-  const token = localStorage.getItem('authToken');
+const [token, setToken] = useState('');
   useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const storedToken = localStorage.getItem('authToken');
+    setToken(storedToken);
     const storedUser = localStorage.getItem('user');
+
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      console.log('user.roleId', user.roleId);
-      if (user.roleId !== 'admin' && !token) {
+      if (user.roleId !== 'admin' && !storedToken) {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         router.push('/auth');
       }
     }
-  }, []);
+  }
+}, []);
 
   const validate = () => {
     const newErrors = {};
