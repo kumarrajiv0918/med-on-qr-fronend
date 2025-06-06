@@ -41,7 +41,7 @@ export default function Navbar() {
 
   const handleChangePassword = () => {
     setOpenDialog(true);
-    handleMenuClose(); // Close menu when dialog opens
+    handleMenuClose();
   };
 
   useEffect(() => {

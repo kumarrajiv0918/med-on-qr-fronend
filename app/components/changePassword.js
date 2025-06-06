@@ -34,7 +34,7 @@ const ChangePasswordDialog = ({ open, onClose, token }) => {
         setLoading(true);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/change-password`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/changePassword`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
