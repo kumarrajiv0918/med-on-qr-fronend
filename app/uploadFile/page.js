@@ -221,17 +221,20 @@ export default function Home() {
                   Files:
                 </Typography>
                 <div style={{ height: '50vh', width: '100%' }}>
-                  <DataGrid
-                    rows={files.map((file, index) => ({
+                 <DataGrid
+                  rows={files
+                    .slice() 
+                    .sort((a, b) => b.fileName.localeCompare(a.fileName)) 
+                    .map((file, index) => ({
                       id: index,
                       fileName: file.fileName,
                       fileUrl: file.fileUrl,
                     }))}
-                    columns={columns}
-                    pageSize={5}
-                    rowsPerPageOptions={[5]}
-                    getRowId={(row) => row.id}
-                  />
+                  columns={columns}
+                  pageSize={5}
+                  rowsPerPageOptions={[5]}
+                  getRowId={(row) => row.id}
+                />
                 </div>
               </Box>
             </CardContent>
