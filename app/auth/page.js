@@ -43,14 +43,14 @@ export default function LoginClient() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${baseURL}/auth/login`, {
+      const res = await axios.post(`${baseURL}/api/auth/login`, {
         email,
         password
       });
 
       if (res.data?.message) {
-        const { roleId } = res.data.data;
-
+        const { roleId } = res.data.data.user;
+console.log(res.data.data);
         if (roleId !== 'admin' && roleId !== 'user') {
           setError('You do not have permission to login.');
           setLoading(false);
@@ -58,7 +58,7 @@ export default function LoginClient() {
         }
 
         // Set localStorage values
-        localStorage.setItem('authToken', res.data.token);
+        localStorage.setItem('authToken', res.data.data.token);
         localStorage.setItem('user', JSON.stringify(res.data.data));
 
         setMessage(res.data.message);

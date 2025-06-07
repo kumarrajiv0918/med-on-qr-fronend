@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -10,60 +10,94 @@ import {
     Alert,
     CircularProgress
 } from '@mui/material';
+import axios from 'axios';
 
-const ChangePasswordDialog = ({ open, onClose, token }) => {
+const ChangePasswordDialog = ({ open, onClose }) => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [loading, setLoading] = useState(false);
+    const [token, setToken] = useState('');
+    const [user,setUser]=useState('');
 
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const storedToken = localStorage.getItem('authToken');
+            setToken(storedToken || '');
+            const storedUser = localStorage.getItem('user');
+
+            if (storedUser) {
+                const user = JSON.parse(storedUser);
+                setUser(user)
+                if (user.roleId !== 'admin' && !storedToken) {
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('user');
+                    window.location.href = '/auth';
+                }
+            }
+        }
+    }, []);
+console.log(user);
     const handleCloseSnackbar = () => setSnackbar({ ...snackbar, open: false });
 
     const handleChangePassword = async () => {
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setSnackbar({ open: true, message: 'All fields are required', severity: 'error' });
+            setSnackbar({ open: true, message: 'All fields are required.', severity: 'error' });
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            setSnackbar({ open: true, message: 'New password must be at least 6 characters.', severity: 'error' });
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setSnackbar({ open: true, message: 'Passwords do not match', severity: 'error' });
+            setSnackbar({ open: true, message: 'Passwords do not match.', severity: 'error' });
             return;
         }
 
         setLoading(true);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/changePassword`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ currentPassword, newPassword })
-            });
+            const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+            if (!backendUrl) throw new Error('Backend URL not set');
 
-            const data = await response.json();
+            const response = await axios.post(
+                `${backendUrl}/api/auth/change-password`,
+                { currentPassword, newPassword },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to change password');
-            }
-
-            setSnackbar({ open: true, message: data.message, severity: 'success' });
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
+            setSnackbar({ open: true, message: response.data.message, severity: 'success' });
+            handleReset();
             onClose();
-        } catch (err) {
-            setSnackbar({ open: true, message: err.message, severity: 'error' });
+        } catch (error) {
+            const errorMsg = error?.response?.data?.message || error.message || 'Something went wrong';
+            setSnackbar({ open: true, message: errorMsg, severity: 'error' });
         } finally {
             setLoading(false);
         }
     };
 
+    const handleReset = () => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+    };
+
+    const handleCloseDialog = () => {
+        handleReset();
+        onClose();
+    };
+
     return (
         <>
-            <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+            <Dialog open={open} onClose={handleCloseDialog} fullWidth maxWidth="sm">
                 <DialogTitle>Change Password</DialogTitle>
                 <DialogContent>
                     <TextField
@@ -92,7 +126,7 @@ const ChangePasswordDialog = ({ open, onClose, token }) => {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onClose} disabled={loading}>
+                    <Button onClick={handleCloseDialog} disabled={loading}>
                         Cancel
                     </Button>
                     <Button variant="contained" onClick={handleChangePassword} disabled={loading}>

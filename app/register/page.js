@@ -45,24 +45,44 @@ export default function RegisterPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
-  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL
-const [token, setToken] = useState('');
-  useEffect(() => {
-  if (typeof window !== 'undefined') {
-    const storedToken = localStorage.getItem('authToken');
-    setToken(storedToken);
-    const storedUser = localStorage.getItem('user');
+  const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const [token, setToken] = useState('');
+  const [clientReady, setClientReady] = useState(false); // ✅ hydration fix
 
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      if (user.roleId !== 'admin' && !storedToken) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        router.push('/auth');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        const token = user.user?.token;
+        setToken(token);
+        if (user.roleId !== 'admin' && !token) {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          router.push('/auth');
+        }
       }
+      setClientReady(true); // ✅ hydration fix
     }
-  }
-}, []);
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      if (!token) return;
+      const res = await axios.get(`${baseURL}/api/users/getUserAll`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUsers(res.data.data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (clientReady && token) {
+      fetchUsers();
+    }
+  }, [clientReady, token]);
 
   const validate = () => {
     const newErrors = {};
@@ -113,29 +133,25 @@ const [token, setToken] = useState('');
       setMessage('');
       setLoading(true);
 
+      const payload = { ...formData };
+      delete payload._id;
+      delete payload.confirmPassword;
+
       if (formData._id) {
-        const payload = { ...formData };
-        delete payload._id;
-        delete payload.confirmPassword;
         const res = await axios.put(
           `${baseURL}/api/updateUser/${formData._id}`,
-          updatePayload,
+          payload,
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         setMessage(res.data.message);
       } else {
-        const payload = { ...formData };
-        delete payload._id;
-        delete payload.confirmPassword;
-        const res = await axios.post(`${baseURL}/api/register`, payload,
+        const res = await axios.post(
+          `${baseURL}/api/users/createUser`,
+          payload,
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
         setMessage(res.data.message);
@@ -150,26 +166,6 @@ const [token, setToken] = useState('');
       setLoading(false);
     }
   };
-
-  const fetchUsers = async () => {
-    try {
-      const res = await axios.get(`${baseURL}/getAlluserApi/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if(!res){
-        console.log('Failed to fetch users:', err);
-      }
-      setUsers(res.data.users);
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const handleOpenDialog = () => {
     setOpenDialog(true);
@@ -190,13 +186,13 @@ const [token, setToken] = useState('');
   const handleEditUser = (row) => {
     setFormData({
       _id: row._id,
-      name: row.name,
-      businessName: row.businessName,
-      email: row.email,
-      pinCode: row.pinCode,
-      address: row.address,
+      name: row.name || '',
+      businessName: row.businessName || '',
+      email: row.email || '',
+      pinCode: row.pinCode?.toString() || '',
+      address: row.address || '',
       password: '',
-      roleId: 'user',
+      roleId: row.roleId || 'user',
       confirmPassword: '',
       createdBy: 'system',
     });
@@ -218,14 +214,12 @@ const [token, setToken] = useState('');
         `${baseURL}/auth/updateUserStatus/${row._id}`,
         payload,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       setMessage(res.data.message);
-      fetchUsers(); // refresh list
+      fetchUsers();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update user status');
     }
@@ -258,6 +252,8 @@ const [token, setToken] = useState('');
       ),
     },
   ];
+
+  if (!clientReady) return null; // ✅ Prevent hydration errors
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -301,7 +297,7 @@ const [token, setToken] = useState('');
                   <TextField
                     label="Name"
                     name="name"
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={handleChange}
                     fullWidth
                     error={!!errors.name}
@@ -312,7 +308,7 @@ const [token, setToken] = useState('');
                   <TextField
                     label="Email"
                     name="email"
-                    value={formData.email}
+                    value={formData.email || ''}
                     onChange={handleChange}
                     fullWidth
                     error={!!errors.email}
@@ -324,7 +320,7 @@ const [token, setToken] = useState('');
                   <TextField
                     label="Business Name"
                     name="businessName"
-                    value={formData.businessName}
+                    value={formData.businessName || ''}
                     onChange={handleChange}
                     fullWidth
                     error={!!errors.businessName}
@@ -338,7 +334,7 @@ const [token, setToken] = useState('');
                         label="Password"
                         name="password"
                         type="password"
-                        value={formData.password}
+                        value={formData.password || ''}
                         onChange={handleChange}
                         fullWidth
                         error={!!errors.password}
@@ -350,7 +346,7 @@ const [token, setToken] = useState('');
                         label="Confirm Password"
                         name="confirmPassword"
                         type="password"
-                        value={formData.confirmPassword}
+                        value={formData.confirmPassword || ''}
                         onChange={handleChange}
                         fullWidth
                         error={!!errors.confirmPassword}
@@ -364,7 +360,7 @@ const [token, setToken] = useState('');
                     label="Pin Code"
                     name="pinCode"
                     type="number"
-                    value={formData.pinCode}
+                    value={formData.pinCode || ''}
                     onChange={handleChange}
                     fullWidth
                     error={!!errors.pinCode}
@@ -376,7 +372,7 @@ const [token, setToken] = useState('');
                     label="Address"
                     name="address"
                     type="text"
-                    value={formData.address}
+                    value={formData.address || ''}
                     onChange={handleChange}
                     multiline
                     rows={3}
